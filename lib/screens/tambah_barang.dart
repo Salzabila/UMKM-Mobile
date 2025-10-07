@@ -23,7 +23,7 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
   File? _fotoFile;
 
   final _barangService = BarangService();
-  final _fotoService = FotoService();
+  // final _fotoService = FotoService();
 
   @override
   void dispose() {
@@ -91,30 +91,30 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
       ),
     );
 
-    if (result == 'gallery') {
-      await _pilihDariGallery();
-    } else if (result == 'camera') {
-      await _ambilDariKamera();
-    }
+    // if (result == 'gallery') {
+    //   await _pilihDariGallery();
+    // } else if (result == 'camera') {
+    //   await _ambilDariKamera();
+    // }
   }
 
-  Future<void> _pilihDariGallery() async {
-    final file = await _fotoService.pilihDariGallery();
-    if (file != null) {
-      setState(() {
-        _fotoFile = file;
-      });
-    }
-  }
+  // Future<void> _pilihDariGallery() async {
+  //   final file = await _fotoService.pilihDariGallery();
+  //   if (file != null) {
+  //     setState(() {
+  //       _fotoFile = file;
+  //     });
+  //   }
+  // }
 
-  Future<void> _ambilDariKamera() async {
-    final file = await _fotoService.ambilDariKamera();
-    if (file != null) {
-      setState(() {
-        _fotoFile = file;
-      });
-    }
-  }
+  // Future<void> _ambilDariKamera() async {
+  //   final file = await _fotoService.ambilDariKamera();
+  //   if (file != null) {
+  //     setState(() {
+  //       _fotoFile = file;
+  //     });
+  //   }
+  // }
 
   void _hapusFoto() {
     setState(() {

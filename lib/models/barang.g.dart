@@ -8,7 +8,7 @@ part of 'barang.dart';
 
 class BarangAdapter extends TypeAdapter<Barang> {
   @override
-  final int typeId = 1;
+  final int typeId = 0;
 
   @override
   Barang read(BinaryReader reader) {

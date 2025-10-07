@@ -1,7 +1,9 @@
 import 'dart:typed_data';
-import 'package:blue_thermal_printer/blue_thermal_printer.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart';
+import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/transaksi.dart';
@@ -20,7 +22,6 @@ class TransaksiBerhasilScreen extends StatefulWidget {
 class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
     with TickerProviderStateMixin {
   final ScreenshotController _screenshotController = ScreenshotController();
-  final BlueThermalPrinter _bluetooth = BlueThermalPrinter.instance;
   bool _isProcessing = false;
   late AnimationController _successAnimationController;
   late Animation<double> _scaleAnimation;
@@ -37,7 +38,7 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _scaleAnimation = Tween<double>(
       begin: 0.5,
       end: 1.0,
@@ -45,7 +46,7 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
       parent: _successAnimationController,
       curve: Curves.elasticOut,
     ));
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -79,16 +80,29 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
   }
 
   Future<void> _cetakStruk() async {
-    setState(() { _isProcessing = true; });
+    setState(() {
+      _isProcessing = true;
+    });
     try {
       final imageBytes = await _captureStruk();
-      bool? isConnected = await _bluetooth.isConnected;
-      if (isConnected != true) {
-        List<BluetoothDevice> devices = await _bluetooth.getBondedDevices();
-        if (devices.isEmpty) throw Exception("Tidak ada printer Bluetooth terpasang.");
-        await _bluetooth.connect(devices.first);
+      bool isConnected = await PrintBluetoothThermal.connectionStatus;
+      if (!isConnected) {
+        List<BluetoothInfo> devices =
+            await PrintBluetoothThermal.pairedBluetooths;
+        if (devices.isEmpty)
+          throw Exception("Tidak ada printer Bluetooth terpasang.");
+        await PrintBluetoothThermal.connect(
+            macPrinterAddress: devices.first.macAdress);
       }
-      await _bluetooth.printImageBytes(imageBytes);
+      // Decode image
+      final img.Image image = img.decodeImage(imageBytes)!;
+      // Generate ESC/POS commands
+      final profile = await CapabilityProfile.load();
+      final generator = Generator(PaperSize.mm58, profile);
+      List<int> bytes = [];
+      bytes += generator.image(image);
+      // Print
+      await PrintBluetoothThermal.writeBytes(bytes);
       if (mounted) {
         _showSuccessSnackBar('Struk berhasil dikirim ke printer');
       }
@@ -97,12 +111,17 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
         _showErrorSnackBar('Gagal mencetak: ${e.toString()}');
       }
     } finally {
-      if (mounted) setState(() { _isProcessing = false; });
+      if (mounted)
+        setState(() {
+          _isProcessing = false;
+        });
     }
   }
 
   Future<void> _shareStruk() async {
-    setState(() { _isProcessing = true; });
+    setState(() {
+      _isProcessing = true;
+    });
     try {
       final imageBytes = await _captureStruk();
       final file = XFile.fromData(
@@ -110,7 +129,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
         name: 'struk-${widget.transaksi.id}.png',
         mimeType: 'image/png',
       );
-      await Share.shareXFiles([file], text: 'Berikut adalah struk pembelian Anda.');
+      await Share.shareXFiles([file],
+          text: 'Berikut adalah struk pembelian Anda.');
       if (mounted) {
         _showSuccessSnackBar('Struk berhasil dibagikan');
       }
@@ -119,7 +139,10 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
         _showErrorSnackBar('Gagal membagikan: ${e.toString()}');
       }
     } finally {
-      if (mounted) setState(() { _isProcessing = false; });
+      if (mounted)
+        setState(() {
+          _isProcessing = false;
+        });
     }
   }
 
@@ -159,7 +182,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
 
   @override
   Widget build(BuildContext context) {
-    final subtotal = widget.transaksi.items.fold(0.0, (sum, item) => sum + (item.barang.harga * item.kuantitas));
+    final subtotal = widget.transaksi.items
+        .fold(0.0, (sum, item) => sum + (item.barang.harga * item.kuantitas));
     final diskon = subtotal - widget.transaksi.total;
 
     return Scaffold(
@@ -312,7 +336,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(20),
@@ -379,7 +404,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
                   color: Colors.blue.shade600,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.receipt_long, color: Colors.white, size: 20),
+                child: const Icon(Icons.receipt_long,
+                    color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -438,7 +464,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              DateFormat('dd/MM/yyyy, HH:mm').format(widget.transaksi.waktuTransaksi),
+              DateFormat('dd/MM/yyyy, HH:mm')
+                  .format(widget.transaksi.waktuTransaksi),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -509,7 +536,9 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon, MaterialColor color, {bool isBold = false}) {
+  Widget _buildDetailRow(
+      String label, String value, IconData icon, MaterialColor color,
+      {bool isBold = false}) {
     return Row(
       children: [
         Container(
@@ -562,7 +591,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
                 color: Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.shopping_bag_outlined, color: Colors.orange.shade600, size: 20),
+              child: Icon(Icons.shopping_bag_outlined,
+                  color: Colors.orange.shade600, size: 20),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -677,21 +707,26 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
       ),
       child: Column(
         children: [
-          _buildSummaryRow('Subtotal', 'Rp ${NumberFormat('#,##0').format(subtotal)}'),
+          _buildSummaryRow(
+              'Subtotal', 'Rp ${NumberFormat('#,##0').format(subtotal)}'),
           const SizedBox(height: 8),
           if (diskon > 0)
             Column(
               children: [
-                _buildSummaryRow('Total Diskon', '- Rp ${NumberFormat('#,##0').format(diskon)}', color: Colors.green.shade600),
+                _buildSummaryRow('Total Diskon',
+                    '- Rp ${NumberFormat('#,##0').format(diskon)}',
+                    color: Colors.green.shade600),
                 const SizedBox(height: 8),
               ],
             ),
           Container(height: 1, color: Colors.blue.shade300),
           const SizedBox(height: 12),
-          _buildSummaryRow('Total Bayar', 'Rp ${NumberFormat('#,##0').format(widget.transaksi.total)}', 
+          _buildSummaryRow('Total Bayar',
+              'Rp ${NumberFormat('#,##0').format(widget.transaksi.total)}',
               isBold: true, fontSize: 18, color: Colors.blue.shade800),
           const SizedBox(height: 16),
-          _buildSummaryRow('Uang Diterima', 'Rp ${NumberFormat('#,##0').format(widget.transaksi.uangDiterima)}'),
+          _buildSummaryRow('Uang Diterima',
+              'Rp ${NumberFormat('#,##0').format(widget.transaksi.uangDiterima)}'),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
@@ -706,24 +741,17 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
                 ),
               ],
             ),
-            child: _buildSummaryRow(
-              'Kembalian', 
-              'Rp ${NumberFormat('#,##0').format(widget.transaksi.kembalian)}', 
-              isBold: true, 
-              color: Colors.green.shade600, 
-              fontSize: 16
-            ),
+            child: _buildSummaryRow('Kembalian',
+                'Rp ${NumberFormat('#,##0').format(widget.transaksi.kembalian)}',
+                isBold: true, color: Colors.green.shade600, fontSize: 16),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {
-    bool isBold = false, 
-    Color? color, 
-    double fontSize = 14
-  }) {
+  Widget _buildSummaryRow(String label, String value,
+      {bool isBold = false, Color? color, double fontSize = 14}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -784,7 +812,8 @@ class _TransaksiBerhasilScreenState extends State<TransaksiBerhasilScreen>
                 child: Column(
                   children: [
                     CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
                     ),
                     const SizedBox(height: 16),
                     Text(
