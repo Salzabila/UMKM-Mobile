@@ -4,7 +4,7 @@ import '../models/barang.dart';
 import 'foto_service.dart';
 
 class BarangService {
-  final FotoService _fotoService = FotoService();
+  // final FotoService _fotoService = FotoService();
   static final BarangService _instance = BarangService._internal();
   factory BarangService() => _instance;
   BarangService._internal();
@@ -27,7 +27,7 @@ class BarangService {
     try {
       String? fotoUrl;
       if (fotoFile != null) {
-        fotoUrl = await _fotoService.uploadFoto(fotoFile, barang.id);
+        // fotoUrl = await _fotoService.uploadFoto(fotoFile, barang.id);
       }
       
       final barangDenganFoto = barang.copyWith(fotoUrl: fotoUrl);
@@ -45,10 +45,10 @@ class BarangService {
       if (fotoFile != null) {
         // Hapus foto lama jika ada
         if (fotoUrl != null) {
-          await _fotoService.hapusFoto(fotoUrl);
+          // await _fotoService.hapusFoto(fotoUrl);
         }
         // Upload foto baru
-        fotoUrl = await _fotoService.uploadFoto(fotoFile, barang.id);
+        // fotoUrl = await _fotoService.uploadFoto(fotoFile, barang.id);
       }
       
       final barangDiupdate = barang.copyWith(fotoUrl: fotoUrl);
@@ -71,7 +71,7 @@ class BarangService {
   Future<void> deleteBarangWithFoto(String barangId) async {
     final barang = _barangBox.get(barangId);
     if (barang != null && barang.fotoUrl != null) {
-      await _fotoService.hapusFoto(barang.fotoUrl!);
+      // await _fotoService.hapusFoto(barang.fotoUrl!);
     }
     await deleteBarang(barangId);
   }

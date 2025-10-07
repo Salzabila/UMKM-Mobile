@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 part 'barang.g.dart'; // Untuk Hive code generation
 
-@HiveType(typeId: 1)
+@HiveType(typeId: 0)
 class Barang extends HiveObject {
   @HiveField(0)
   final String id;
