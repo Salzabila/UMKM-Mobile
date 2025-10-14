@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/barang.dart';
 import '../service/barang_service.dart';
-import '../service/foto_service.dart';
 
 class TambahBarangScreen extends StatefulWidget {
   const TambahBarangScreen({super.key});

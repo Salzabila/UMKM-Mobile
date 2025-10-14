@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'restock_screen.dart';
 import 'return_barang_screen.dart';
-import './operasional.dart';
+import 'operasional_screen.dart';
 import './rekapitulasi.dart';
 
 class LainnyaScreen extends StatelessWidget {

@@ -2,294 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/barang.dart';
 import '../service/barang_service.dart';
 
-class RestockScreen extends StatefulWidget {
-  const RestockScreen({super.key});
-
-  @override
-  State<RestockScreen> createState() => _RestockScreenState();
-}
-
-class _RestockScreenState extends State<RestockScreen> {
-  final BarangService _barangService = BarangService();
-  final TextEditingController _searchController = TextEditingController();
-  
-  List<Barang> _daftarBarang = [];
-  List<Barang> _filteredBarang = [];
-  bool _isLoading = true;
-  String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBarang();
-  }
-
-  Future<void> _loadBarang() async {
-    if (mounted) {
-      setState(() => _isLoading = true);
-    }
-    
-    try {
-      List<Barang> barang = await _barangService.getBarang();
-      if (mounted) {
-        setState(() {
-          _daftarBarang = barang;
-          _filteredBarang = barang;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showSnackBar('Gagal memuat data: $e', isError: true);
-      }
-    }
-  }
-
-  void _filterProducts() {
-    if (_searchQuery.isEmpty) {
-      setState(() {
-        _filteredBarang = _daftarBarang;
-      });
-    } else {
-      final query = _searchQuery.toLowerCase();
-      setState(() {
-        _filteredBarang = _daftarBarang.where((b) => 
-          b.namaBarang.toLowerCase().contains(query)
-        ).toList();
-      });
-    }
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  void _showRestockForm(Barang barang) {
-    Navigator.push(
-      context, 
-      MaterialPageRoute(
-        builder: (_) => RestockFormScreen(
-          barang: barang, 
-          onRestockComplete: _loadBarang
-        )
-      )
-    );
-  }
-
-  Widget _buildStokBadge(int stok) {
-    Color color;
-    String label;
-    if (stok <= 5) {
-      color = Colors.red;
-      label = 'Stok Rendah';
-    } else if (stok <= 20) {
-      color = Colors.orange;
-      label = 'Stok Menengah';
-    } else {
-      color = Colors.green;
-      label = 'Stok Aman';
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(25), 
-        borderRadius: BorderRadius.circular(6)
-      ), 
-      child: Text(
-        label, 
-        style: TextStyle(
-          color: color, 
-          fontSize: 10, 
-          fontWeight: FontWeight.w600
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 60, bottom: 20, left: 20, right: 20),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade700,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20), 
-                bottomRight: Radius.circular(20)
-              )
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Back Button dan Judul
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24), 
-                      onPressed: () => Navigator.pop(context), 
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Kelola Stok', 
-                          style: TextStyle(
-                            fontSize: 20, 
-                            fontWeight: FontWeight.bold, 
-                            color: Colors.white
-                          )
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${_daftarBarang.length} Produk', 
-                          style: const TextStyle(
-                            color: Colors.white70, 
-                            fontSize: 14
-                          )
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                
-                // Search Bar - Diperbaiki
-                Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                        _filterProducts();
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Cari produk...',
-                      hintStyle: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16, // Ukuran font diperbesar
-                      ),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Daftar Produk
-          Expanded(
-            child: _isLoading 
-              ? const Center(child: CircularProgressIndicator())
-              : _filteredBarang.isEmpty 
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
-                        const SizedBox(height: 16),
-                        Text(
-                          _searchQuery.isEmpty 
-                            ? 'Tidak ada produk' 
-                            : 'Produk tidak ditemukan',
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600)
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredBarang.length,
-                    itemBuilder: (context, index) => _buildProductItem(_filteredBarang[index]),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductItem(Barang barang) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.blue.withAlpha(25),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.inventory_2, color: Colors.blue, size: 20),
-        ),
-        title: Text(
-          barang.namaBarang,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Row(
-            children: [
-              Text(
-                'Stok: ${barang.stok}',
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildStokBadge(barang.stok),
-            ],
-          ),
-        ),
-        onTap: () => _showRestockForm(barang),
-      ),
-    );
-  }
-}
-
+// [1] Kelas RestockFormScreen dipindahkan ke atas
 class RestockFormScreen extends StatefulWidget {
   final Barang barang;
   final VoidCallback onRestockComplete;
@@ -353,10 +66,15 @@ class _RestockFormScreenState extends State<RestockFormScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Header
+          // Header - FIXED
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 60, bottom: 24, left: 20, right: 20),
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 8,
+              bottom: 20,
+              left: 16,
+              right: 20,
+            ),
             decoration: BoxDecoration(
               color: Colors.blue.shade700,
               borderRadius: const BorderRadius.only(
@@ -366,18 +84,30 @@ class _RestockFormScreenState extends State<RestockFormScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24), 
-                  onPressed: () => Navigator.pop(context), 
+                // Icon Back dengan padding yang sama
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.pop(context), 
+                  ),
                 ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Form Restock Barang', 
-                  style: TextStyle(
-                    fontSize: 20, 
-                    fontWeight: FontWeight.bold, 
-                    color: Colors.white
-                  )
+                const SizedBox(width: 8),
+                // Teks judul dengan alignment center
+                const Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Form Restock Barang', 
+                      style: TextStyle(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold, 
+                        color: Colors.white,
+                      )
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -422,7 +152,7 @@ class _RestockFormScreenState extends State<RestockFormScreen> {
                     ),
                     const SizedBox(height: 24),
                     
-                    // Jumlah Stok Tambahan - Diperbaiki
+                    // Jumlah Stok Tambahan
                     const Text(
                       'Jumlah Stok Tambahan *',
                       style: TextStyle(
@@ -440,10 +170,10 @@ class _RestockFormScreenState extends State<RestockFormScreen> {
                             onChanged: (value) => setState(() {}),
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: Colors.white, // Warna background putih
+                              fillColor: Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade400), // Border yang terlihat
+                                borderSide: BorderSide(color: Colors.grey.shade400),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -661,3 +391,306 @@ class _RestockFormScreenState extends State<RestockFormScreen> {
     );
   }
 }
+
+// [2] Kemudian kelas RestockScreen
+class RestockScreen extends StatefulWidget {
+  const RestockScreen({super.key});
+
+  @override
+  State<RestockScreen> createState() => _RestockScreenState();
+}
+
+class _RestockScreenState extends State<RestockScreen> {
+  final BarangService _barangService = BarangService();
+  final TextEditingController _searchController = TextEditingController();
+  
+  List<Barang> _daftarBarang = [];
+  List<Barang> _filteredBarang = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBarang();
+  }
+
+  Future<void> _loadBarang() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+    
+    try {
+      List<Barang> barang = await _barangService.getBarang();
+      if (mounted) {
+        setState(() {
+          _daftarBarang = barang;
+          _filteredBarang = barang;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar('Gagal memuat data: $e', isError: true);
+      }
+    }
+  }
+
+  void _filterProducts() {
+    if (_searchQuery.isEmpty) {
+      setState(() {
+        _filteredBarang = _daftarBarang;
+      });
+    } else {
+      final query = _searchQuery.toLowerCase();
+      setState(() {
+        _filteredBarang = _daftarBarang.where((b) => 
+          b.namaBarang.toLowerCase().contains(query)
+        ).toList();
+      });
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showRestockForm(Barang barang) {
+    Navigator.push(
+      context, 
+      MaterialPageRoute(
+        builder: (_) => RestockFormScreen(
+          barang: barang, 
+          onRestockComplete: _loadBarang
+        )
+      )
+    );
+  }
+
+  Widget _buildStokBadge(int stok) {
+    Color color;
+    String label;
+    if (stok <= 5) {
+      color = Colors.red;
+      label = 'Stok Rendah';
+    } else if (stok <= 20) {
+      color = Colors.orange;
+      label = 'Stok Menengah';
+    } else {
+      color = Colors.green;
+      label = 'Stok Aman';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25), 
+        borderRadius: BorderRadius.circular(6)
+      ), 
+      child: Text(
+        label, 
+        style: TextStyle(
+          color: color, 
+          fontSize: 10, 
+          fontWeight: FontWeight.w600
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          // Header - FIXED
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 8,
+              bottom: 20,
+              left: 16,
+              right: 20,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade700,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20), 
+                bottomRight: Radius.circular(20)
+              )
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back Button dan Judul - PERBAIKAN ALIGNMENT
+                Row(
+                  children: [
+                    // Icon Back dengan padding yang sesuai
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => Navigator.pop(context), 
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Teks judul dengan alignment yang tepat
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Kelola Stok', 
+                          style: TextStyle(
+                            fontSize: 20, 
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.white,
+                          )
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_daftarBarang.length} Produk', 
+                          style: const TextStyle(
+                            color: Colors.white70, 
+                            fontSize: 14,
+                          )
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Search Bar
+                Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                        _filterProducts();
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Cari produk...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                      ),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Daftar Produk
+          Expanded(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredBarang.isEmpty 
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchQuery.isEmpty 
+                            ? 'Tidak ada produk' 
+                            : 'Produk tidak ditemukan',
+                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600)
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredBarang.length,
+                    itemBuilder: (context, index) => _buildProductItem(_filteredBarang[index]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductItem(Barang barang) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.blue.withAlpha(25),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.inventory_2, color: Colors.blue, size: 20),
+        ),
+        title: Text(
+          barang.namaBarang,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              Text(
+                'Stok: ${barang.stok}',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildStokBadge(barang.stok),
+            ],
+          ),
+        ),
+        onTap: () => _showRestockForm(barang),
+      ),
+    );
+  }
+}
+

@@ -10,11 +10,12 @@ import '../utils/enums.dart';
 import '../utils/filter_result.dart';
 import 'manajemen_barang.dart';
 import 'notifikasi_expired.dart';
-import 'operasional.dart';
+import 'operasional_screen.dart';
 import 'pelanggan_list_screen.dart';
 import 'rekapitulasi.dart';
 import 'restock_screen.dart';
 import 'return_barang_screen.dart';
+import 'operasional_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});

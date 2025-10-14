@@ -1,9 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/pelanggan.dart';
 import '../service/keranjang_provider.dart';
-import '../utils/enums.dart';
 import 'pembayaran_screen.dart'; // PERBAIKAN: Ubah dari ./pembayaran.dart
 import './pelanggan_list_screen.dart';
 
@@ -15,8 +15,6 @@ class KeranjangScreen extends StatefulWidget {
 }
 
 class _KeranjangScreenState extends State<KeranjangScreen> {
-  final _diskonController = TextEditingController();
-
   // MODERN COLOR PALETTE - Consistent with Dashboard
   static const Color _primaryColor = Color(0xFF6366F1);
   static const Color _accentColor = Color(0xFF06D6A0);
@@ -45,12 +43,6 @@ class _KeranjangScreenState extends State<KeranjangScreen> {
     spreadRadius: -8,
   );
 
-  @override
-  void dispose() {
-    _diskonController.dispose();
-    super.dispose();
-  }
-
   void _bukaDaftarPelanggan() async {
     final pelangganTerpilih = await Navigator.of(context).push<Pelanggan>(
       MaterialPageRoute(
@@ -66,14 +58,6 @@ class _KeranjangScreenState extends State<KeranjangScreen> {
   Widget build(BuildContext context) {
     return Consumer<KeranjangProvider>(
       builder: (ctx, keranjang, child) {
-        if (keranjang.diskonValue == 0) {
-          _diskonController.clear();
-        } else {
-          _diskonController.text = keranjang.diskonValue.toStringAsFixed(0);
-          _diskonController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _diskonController.text.length));
-        }
-
         return Scaffold(
           backgroundColor: _bgColor,
           appBar: AppBar(
@@ -134,8 +118,6 @@ class _KeranjangScreenState extends State<KeranjangScreen> {
               if (keranjang.items.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _buildModernTambahProdukButton(),
-                const SizedBox(height: 20),
-                _buildModernDiskonSection(keranjang),
                 const SizedBox(height: 20),
                 _buildModernMetodePembayaran(keranjang),
                 const SizedBox(height: 100),
@@ -476,145 +458,6 @@ class _KeranjangScreenState extends State<KeranjangScreen> {
     );
   }
 
-  Widget _buildModernDiskonSection(KeranjangProvider keranjang) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [_softShadow],
-        border: Border.all(color: _borderColor, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _warningColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.local_offer_rounded, 
-                    color: _warningColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Diskon Transaksi',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: _textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Container(
-            decoration: BoxDecoration(
-              color: _bgColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _borderColor),
-            ),
-            child: ToggleButtons(
-              isSelected: [
-                keranjang.diskonTipe == DiskonTipe.nominal,
-                keranjang.diskonTipe == DiskonTipe.persen,
-              ],
-              onPressed: (index) {
-                final tipe = index == 0 ? DiskonTipe.nominal : DiskonTipe.persen;
-                final value = double.tryParse(_diskonController.text) ?? 0.0;
-                keranjang.terapkanDiskon(value: value, tipe: tipe);
-              },
-              borderRadius: BorderRadius.circular(14),
-              borderColor: Colors.transparent,
-              selectedBorderColor: Colors.transparent,
-              fillColor: _warningColor,
-              selectedColor: Colors.white,
-              color: _textSecondary,
-              constraints: BoxConstraints(
-                minHeight: 48,
-                minWidth: (MediaQuery.of(context).size.width - 80) / 2,
-              ),
-              children: const [
-                Text('Nominal (Rp)', style: TextStyle(fontWeight: FontWeight.w600)),
-                Text('Persentase (%)', style: TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _diskonController,
-            decoration: InputDecoration(
-              labelText: 'Masukkan Jumlah Diskon',
-              labelStyle: const TextStyle(color: _textSecondary),
-              prefixText: keranjang.diskonTipe == DiskonTipe.nominal ? 'Rp ' : null,
-              suffixText: keranjang.diskonTipe == DiskonTipe.persen ? ' %' : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: _borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: _warningColor),
-              ),
-              filled: true,
-              fillColor: _bgColor,
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: (value) {
-              final diskonValue = double.tryParse(value) ?? 0.0;
-              keranjang.terapkanDiskon(value: diskonValue, tipe: keranjang.diskonTipe);
-            },
-          ),
-          const SizedBox(height: 16),
-          if (keranjang.diskonTipe == DiskonTipe.nominal)
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: [5000, 10000, 20000, 50000]
-                  .map((nominal) => ActionChip(
-                        label: Text(
-                          'Rp${nominal ~/ 1000}rb',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        onPressed: () => keranjang.terapkanDiskon(
-                          value: nominal.toDouble(),
-                          tipe: DiskonTipe.nominal,
-                        ),
-                        backgroundColor: _warningColor.withOpacity(0.1),
-                        side: BorderSide(color: _warningColor.withOpacity(0.3)),
-                        labelStyle: const TextStyle(color: _warningColor),
-                      ))
-                  .toList(),
-            )
-          else if (keranjang.diskonTipe == DiskonTipe.persen)
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: [5, 10, 15, 25]
-                  .map((persen) => ActionChip(
-                        label: Text(
-                          '$persen%',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        onPressed: () => keranjang.terapkanDiskon(
-                          value: persen.toDouble(),
-                          tipe: DiskonTipe.persen,
-                        ),
-                        backgroundColor: _warningColor.withOpacity(0.1),
-                        side: BorderSide(color: _warningColor.withOpacity(0.3)),
-                        labelStyle: const TextStyle(color: _warningColor),
-                      ))
-                  .toList(),
-            )
-        ],
-      ),
-    );
-  }
-
   Widget _buildModernMetodePembayaran(KeranjangProvider keranjang) {
     final List<Map<String, dynamic>> metodeList = [
       {'nama': 'Tunai', 'icon': Icons.money_rounded, 'color': _successColor},
@@ -742,74 +585,24 @@ class _KeranjangScreenState extends State<KeranjangScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: _borderColor),
             ),
-            child: Column(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Subtotal',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: _textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      'Rp ${NumberFormat('#,##0', 'id_ID').format(keranjang.subtotal)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _textPrimary,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Total Tagihan',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: _textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Diskon${keranjang.diskonTipe == DiskonTipe.persen ? " (${keranjang.diskonValue.toStringAsFixed(0)}%)" : ""}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: _textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      '- Rp ${NumberFormat('#,##0', 'id_ID').format(keranjang.diskon)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _successColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: _borderColor),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total Tagihan',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: _textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Rp ${NumberFormat('#,##0', 'id_ID').format(keranjang.totalHarga)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                        color: _primaryColor,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Rp ${NumberFormat('#,##0', 'id_ID').format(keranjang.totalHarga)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    color: _primaryColor,
+                  ),
                 ),
               ],
             ),
