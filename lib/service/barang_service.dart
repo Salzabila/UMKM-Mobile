@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/barang.dart';
-import 'foto_service.dart';
 
 class BarangService {
   // final FotoService _fotoService = FotoService();

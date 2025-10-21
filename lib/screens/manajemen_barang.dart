@@ -12,182 +12,472 @@ class ManajemenBarangScreen extends StatefulWidget {
 }
 
 class _ManajemenBarangScreenState extends State<ManajemenBarangScreen> {
-  late Future<List<Barang>> _barangFuture;
   final BarangService _barangService = BarangService();
   final TextEditingController _searchController = TextEditingController();
+  
+  List<Barang> _daftarBarang = [];
   List<Barang> _filteredBarang = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _muatUlangProduk();
-    _searchController.addListener(_onSearchChanged);
+    _loadBarang();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _muatUlangProduk() {
-    setState(() {
-      _barangFuture = _barangService.getBarang();
-    });
-  }
-
-  void _onSearchChanged() {
-    _barangFuture.then((barangList) {
-      setState(() {
-        if (_searchController.text.isEmpty) {
-          _filteredBarang = barangList;
-        } else {
-          _filteredBarang = barangList.where((barang) =>
-            barang.namaBarang.toLowerCase().contains(_searchController.text.toLowerCase())
-          ).toList();
-        }
-      });
-    });
-  }
-
-  Color _getStockIndicatorColor(int stock) {
-    if (stock == 0) return Colors.red.shade400;
-    if (stock <= 5) return Colors.orange.shade400;
-    return Colors.green.shade400;
-  }
-
-  IconData _getCategoryIcon(String jenis) {
-    switch (jenis.toLowerCase()) {
-      case 'minuman':
-        return Icons.local_drink;
-      case 'makanan':
-        return Icons.restaurant;
-      case 'snack':
-        return Icons.cookie;
-      default:
-        return Icons.inventory_2;
+  Future<void> _loadBarang() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
     }
+    
+    try {
+      List<Barang> barang = await _barangService.getBarang();
+      if (mounted) {
+        setState(() {
+          _daftarBarang = barang;
+          _filteredBarang = barang;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar('Gagal memuat data: $e', isError: true);
+      }
+    }
+  }
+
+  void _filterProducts() {
+    if (_searchQuery.isEmpty) {
+      setState(() {
+        _filteredBarang = _daftarBarang;
+      });
+    } else {
+      final query = _searchQuery.toLowerCase();
+      setState(() {
+        _filteredBarang = _daftarBarang.where((b) => 
+          b.namaBarang.toLowerCase().contains(query)
+        ).toList();
+      });
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildStokBadge(int stok) {
+    Color color;
+    String label;
+    if (stok <= 5) {
+      color = Colors.red;
+      label = 'Stok Rendah';
+    } else if (stok <= 20) {
+      color = Colors.orange;
+      label = 'Stok Menengah';
+    } else {
+      color = Colors.green;
+      label = 'Stok Aman';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25), 
+        borderRadius: BorderRadius.circular(6)
+      ), 
+      child: Text(
+        label, 
+        style: TextStyle(
+          color: color, 
+          fontSize: 10, 
+          fontWeight: FontWeight.w600
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHargaText(double harga) {
+    return Text(
+      'Rp ${NumberFormat('#,##0', 'id_ID').format(harga)}',
+      style: TextStyle(
+        fontSize: 14,
+        color: Colors.green.shade700,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  void _showProductActions(Barang barang) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.4,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade700,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => Navigator.pop(context), 
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Aksi Produk', 
+                              style: TextStyle(
+                                fontSize: 20, 
+                                fontWeight: FontWeight.bold, 
+                                color: Colors.white,
+                              )
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      barang.namaBarang,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Action Buttons
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      // Informasi Produk
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildInfoRow('Jenis Barang', barang.jenis),
+                            const SizedBox(height: 8),
+                            _buildInfoRow('Stok', '${barang.stok} unit'),
+                            const SizedBox(height: 8),
+                            _buildInfoRow('Harga', 'Rp ${NumberFormat('#,##0', 'id_ID').format(barang.harga)}'),
+                            const SizedBox(height: 8),
+                            _buildInfoRow('Tanggal Masuk', DateFormat('dd/MM/yyyy').format(barang.tanggalMasuk)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Tombol Aksi
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _confirmDelete(barang);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: Colors.red.shade400),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red.shade400, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'HAPUS',
+                                    style: TextStyle(
+                                      color: Colors.red.shade400,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                // TODO: Navigate to edit screen
+                                _showEditFeatureComingSoon();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.edit, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'EDIT',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditFeatureComingSoon() {
+    _showSnackBar('Fitur edit akan segera tersedia');
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _confirmDelete(Barang barang) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Produk'),
+        content: Text('Apakah Anda yakin ingin menghapus ${barang.namaBarang}? Tindakan ini tidak dapat dibatalkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await _barangService.deleteBarang(barang.id);
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  _loadBarang();
+                  _showSnackBar('Produk berhasil dihapus');
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  _showSnackBar('Gagal menghapus produk: $e', isError: true);
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        title: const Text('Manajemen Produk'),
-        backgroundColor: Colors.blue.shade600,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: _muatUlangProduk,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Search Section
+          // Header - Sama seperti RestockScreen
           Container(
-            color: Colors.blue.shade600,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Cari produk...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged();
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 8,
+              bottom: 20,
+              left: 16,
+              right: 20,
             ),
-          ),
-
-          // Product List
-          Expanded(
-            child: FutureBuilder<List<Barang>>(
-              future: _barangFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
+            decoration: BoxDecoration(
+              color: Colors.blue.shade700,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20), 
+                bottomRight: Radius.circular(20)
+              )
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back Button dan Judul
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => Navigator.pop(context), 
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Terjadi kesalahan',
-                          style: TextStyle(color: Colors.grey.shade600),
+                        const Text(
+                          'Manajemen Produk', 
+                          style: TextStyle(
+                            fontSize: 20, 
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.white,
+                          )
                         ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: _muatUlangProduk,
-                          child: const Text('Coba Lagi'),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_daftarBarang.length} Produk', 
+                          style: const TextStyle(
+                            color: Colors.white70, 
+                            fontSize: 14,
+                          )
                         ),
                       ],
                     ),
-                  );
-                }
+                  ],
+                ),
+                const SizedBox(height: 16),
                 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
+                // Search Bar
+                Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                        _filterProducts();
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Cari produk...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                      ),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Daftar Produk
+          Expanded(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredBarang.isEmpty 
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
                         const SizedBox(height: 16),
                         Text(
-                          'Belum ada produk',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
+                          _searchQuery.isEmpty 
+                            ? 'Belum ada produk' 
+                            : 'Produk tidak ditemukan',
+                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600)
+                        ),
+                        if (_searchQuery.isEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap tombol + untuk menambah produk',
+                            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Tap tombol + untuk menambah produk',
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
+                        ],
                       ],
                     ),
-                  );
-                }
-
-                final daftarBarang = snapshot.data!;
-                if (_filteredBarang.isEmpty && _searchController.text.isEmpty) {
-                  _filteredBarang = daftarBarang;
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _filteredBarang.length,
-                  itemBuilder: (context, index) {
-                    final barang = _filteredBarang[index];
-                    return _buildProductCard(barang);
-                  },
-                );
-              },
-            ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredBarang.length,
+                    itemBuilder: (context, index) => _buildProductItem(_filteredBarang[index]),
+                  ),
           ),
         ],
       ),
@@ -198,15 +488,18 @@ class _ManajemenBarangScreenState extends State<ManajemenBarangScreen> {
               builder: (context) => const TambahBarangScreen(),
             ),
           );
-          if (result == true) _muatUlangProduk();
+          if (result == true && mounted) {
+            _loadBarang();
+          }
         },
-        backgroundColor: Colors.blue.shade600,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add, size: 24),
       ),
     );
   }
 
-  Widget _buildProductCard(Barang barang) {
+  Widget _buildProductItem(Barang barang) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -215,244 +508,54 @@ class _ManajemenBarangScreenState extends State<ManajemenBarangScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            // TODO: Navigate to edit screen
-            _showProductDetail(barang);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Icon with background (Profile style)
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: _getStockIndicatorColor(barang.stok).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _getCategoryIcon(barang.jenis),
-                    color: _getStockIndicatorColor(barang.stok),
-                    size: 24,
-                  ),
-                ),
-                
-                const SizedBox(width: 16),
-                
-                // Product Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        barang.namaBarang,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            'Stok: ${barang.stok}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Rp ${NumberFormat('#,##0', 'id_ID').format(barang.harga)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.green.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Arrow icon (Profile style)
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey.shade400,
-                  size: 24,
-                ),
-              ],
-            ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.blue.withAlpha(25),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.inventory_2, color: Colors.blue, size: 20),
+        ),
+        title: Text(
+          barang.namaBarang,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
           ),
         ),
-      ),
-    );
-  }
-
-  void _showProductDetail(Barang barang) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Title
-              Text(
-                barang.namaBarang,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Details
-              _buildDetailRow('Jenis', barang.jenis),
-              _buildDetailRow('Stok', '${barang.stok} unit'),
-              _buildDetailRow('Harga', 'Rp ${NumberFormat('#,##0', 'id_ID').format(barang.harga)}'),
-              _buildDetailRow('Tanggal Masuk', DateFormat('dd/MM/yyyy').format(barang.tanggalMasuk)),
-              if (barang.expired != null)
-                _buildDetailRow('Expired', DateFormat('dd/MM/yyyy').format(barang.expired!)),
-              
-              const SizedBox(height: 24),
-              
-              // Actions
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _confirmDelete(barang);
-                      },
-                      icon: const Icon(Icons.delete, size: 20),
-                      label: const Text('Hapus'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: BorderSide(color: Colors.red.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                  Text(
+                    'Stok: ${barang.stok}',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // TODO: Navigate to edit screen
-                      },
-                      icon: const Icon(Icons.edit, size: 20),
-                      label: const Text('Edit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: 8),
+                  _buildStokBadge(barang.stok),
                 ],
               ),
+              const SizedBox(height: 4),
+              _buildHargaText(barang.harga),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(Barang barang) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Produk'),
-        content: Text('Apakah Anda yakin ingin menghapus ${barang.namaBarang}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _barangService.deleteBarang(barang.id);
-              if (mounted) {
-                Navigator.pop(ctx);
-                _muatUlangProduk();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Produk berhasil dihapus'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Hapus'),
-          ),
-        ],
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 24),
+        onTap: () => _showProductActions(barang),
       ),
     );
   }
