@@ -1,23 +1,28 @@
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/return_barang.dart';
+﻿import '../models/return_barang.dart';
 
 class ReturnService {
-  final Box<ReturnBarang> _returnBox = Hive.box<ReturnBarang>('returnBox');
+  // TODO: Replace with your database implementation (API, SQLite, etc.)
+  final List<ReturnBarang> _returnList = [];
 
-  // Mengambil semua data return, diurutkan dari yang terbaru
   Future<List<ReturnBarang>> getSemuaReturn() async {
-    final daftarReturn = _returnBox.values.toList();
+    // TODO: Fetch from API or database
+    final daftarReturn = List<ReturnBarang>.from(_returnList);
     daftarReturn.sort((a, b) => b.tanggalReturn.compareTo(a.tanggalReturn));
     return daftarReturn;
   }
 
-  // Menyimpan data return baru
   Future<void> simpanReturn(ReturnBarang returnBaru) async {
-    await _returnBox.put(returnBaru.id, returnBaru);
+    // TODO: Save to API or database
+    final index = _returnList.indexWhere((r) => r.id == returnBaru.id);
+    if (index != -1) {
+      _returnList[index] = returnBaru;
+    } else {
+      _returnList.add(returnBaru);
+    }
   }
 
-  // Menghapus data return (jika diperlukan)
   Future<void> hapusReturn(String id) async {
-    await _returnBox.delete(id);
+    // TODO: Delete from API or database
+    _returnList.removeWhere((r) => r.id == id);
   }
 }

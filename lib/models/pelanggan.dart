@@ -1,18 +1,9 @@
-import 'package:hive/hive.dart';
-part 'pelanggan.g.dart';
-
-@HiveType(typeId: 1)
-class Pelanggan extends HiveObject {
-  @HiveField(0)
+﻿class Pelanggan {
   final String id;
-  @HiveField(1)
-  String namaLengkap;
-  @HiveField(2)
-  String nomorHp;
-  @HiveField(3)
-  String? email;
-  @HiveField(4)
-  String? fotoPath;
+  final String namaLengkap;
+  final String nomorHp;
+  final String? email;
+  final String? fotoPath;
 
   Pelanggan({
     required this.id,
@@ -21,4 +12,24 @@ class Pelanggan extends HiveObject {
     this.email,
     this.fotoPath,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'namaLengkap': namaLengkap,
+      'nomorHp': nomorHp,
+      'email': email,
+      'fotoPath': fotoPath,
+    };
+  }
+
+  factory Pelanggan.fromJson(Map<String, dynamic> json) {
+    return Pelanggan(
+      id: json['id'],
+      namaLengkap: json['namaLengkap'],
+      nomorHp: json['nomorHp'],
+      email: json['email'],
+      fotoPath: json['fotoPath'],
+    );
+  }
 }

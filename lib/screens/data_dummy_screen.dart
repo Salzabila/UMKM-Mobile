@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/barang.dart';
-import '../models/pelanggan.dart';
-import '../models/biaya_operasional.dart';
 import '../utils/dummy_data_helper.dart';
 
 class DataDummyScreen extends StatefulWidget {
@@ -87,13 +83,8 @@ class _DataDummyScreenState extends State<DataDummyScreen> {
     });
 
     try {
-      final barangBox = Hive.box<Barang>('barangBox');
-      final pelangganBox = Hive.box<Pelanggan>('pelangganBox');
-      final biayaBox = Hive.box<BiayaOperasional>('biayaBox');
-
-      await barangBox.clear();
-      await pelangganBox.clear();
-      await biayaBox.clear();
+      // TODO: Implement new data deletion logic without Hive
+      // Replace with your new database implementation
 
       setState(() {
         _isLoading = false;
@@ -172,9 +163,10 @@ class _DataDummyScreenState extends State<DataDummyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final barangBox = Hive.box<Barang>('barangBox');
-    final pelangganBox = Hive.box<Pelanggan>('pelangganBox');
-    final biayaBox = Hive.box<BiayaOperasional>('biayaBox');
+    // TODO: Replace with new database implementation
+    final barangCount = 0; // Replace with actual count from new database
+    final pelangganCount = 0; // Replace with actual count from new database
+    final biayaCount = 0; // Replace with actual count from new database
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -240,7 +232,7 @@ class _DataDummyScreenState extends State<DataDummyScreen> {
 
               _buildStatCard(
                 'Barang',
-                barangBox.length,
+                barangCount,
                 Icons.inventory_2,
                 Colors.blue,
               ),
@@ -248,7 +240,7 @@ class _DataDummyScreenState extends State<DataDummyScreen> {
 
               _buildStatCard(
                 'Pelanggan',
-                pelangganBox.length,
+                pelangganCount,
                 Icons.people,
                 Colors.green,
               ),
@@ -256,7 +248,7 @@ class _DataDummyScreenState extends State<DataDummyScreen> {
 
               _buildStatCard(
                 'Biaya Operasional',
-                biayaBox.length,
+                biayaCount,
                 Icons.receipt_long,
                 Colors.orange,
               ),

@@ -1,18 +1,26 @@
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/pelanggan.dart';
+﻿import '../models/pelanggan.dart';
 
 class PelangganService {
-  final Box<Pelanggan> _pelangganBox = Hive.box<Pelanggan>('pelangganBox');
+  // TODO: Replace with your database implementation (API, SQLite, etc.)
+  final List<Pelanggan> _pelangganList = [];
 
   Future<List<Pelanggan>> getSemuaPelanggan() async {
-    return _pelangganBox.values.toList();
+    // TODO: Fetch from API or database
+    return List.from(_pelangganList);
   }
 
   Future<void> simpanPelanggan(Pelanggan pelanggan) async {
-    await _pelangganBox.put(pelanggan.id, pelanggan);
+    // TODO: Save to API or database
+    final index = _pelangganList.indexWhere((p) => p.id == pelanggan.id);
+    if (index != -1) {
+      _pelangganList[index] = pelanggan;
+    } else {
+      _pelangganList.add(pelanggan);
+    }
   }
 
   Future<void> hapusPelanggan(String id) async {
-    await _pelangganBox.delete(id);
+    // TODO: Delete from API or database
+    _pelangganList.removeWhere((p) => p.id == id);
   }
 }

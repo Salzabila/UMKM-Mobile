@@ -1,22 +1,9 @@
-import 'package:hive/hive.dart';
-part 'biaya_operasional.g.dart';
-
-@HiveType(typeId: 2) // ID unik baru (Barang=0, Pelanggan=1)
-class BiayaOperasional extends HiveObject {
-  @HiveField(0)
+﻿class BiayaOperasional {
   final String id;
-
-  @HiveField(1)
-  String namaBiaya;
-
-  @HiveField(2)
-  double jumlah;
-
-  @HiveField(3)
-  DateTime tanggal;
-
-  @HiveField(4)
-  String? kategori;
+  final String namaBiaya;
+  final double jumlah;
+  final DateTime tanggal;
+  final String? kategori;
 
   BiayaOperasional({
     required this.id,
@@ -25,4 +12,24 @@ class BiayaOperasional extends HiveObject {
     required this.tanggal,
     this.kategori,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'namaBiaya': namaBiaya,
+      'jumlah': jumlah,
+      'tanggal': tanggal.toIso8601String(),
+      'kategori': kategori,
+    };
+  }
+
+  factory BiayaOperasional.fromJson(Map<String, dynamic> json) {
+    return BiayaOperasional(
+      id: json['id'],
+      namaBiaya: json['namaBiaya'],
+      jumlah: json['jumlah'].toDouble(),
+      tanggal: DateTime.parse(json['tanggal']),
+      kategori: json['kategori'],
+    );
+  }
 }

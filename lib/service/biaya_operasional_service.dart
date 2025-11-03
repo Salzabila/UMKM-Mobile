@@ -1,20 +1,28 @@
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/biaya_operasional.dart';
+﻿import '../models/biaya_operasional.dart';
 
 class BiayaOperasionalService {
-  final Box<BiayaOperasional> _biayaBox = Hive.box<BiayaOperasional>('biayaBox');
+  // TODO: Replace with your database implementation (API, SQLite, etc.)
+  final List<BiayaOperasional> _biayaList = [];
 
   Future<List<BiayaOperasional>> getSemuaBiaya() async {
-    final biaya = _biayaBox.values.toList();
+    // TODO: Fetch from API or database
+    final biaya = List<BiayaOperasional>.from(_biayaList);
     biaya.sort((a, b) => b.tanggal.compareTo(a.tanggal));
     return biaya;
   }
 
   Future<void> simpanBiaya(BiayaOperasional biaya) async {
-    await _biayaBox.put(biaya.id, biaya);
+    // TODO: Save to API or database
+    final index = _biayaList.indexWhere((b) => b.id == biaya.id);
+    if (index != -1) {
+      _biayaList[index] = biaya;
+    } else {
+      _biayaList.add(biaya);
+    }
   }
 
   Future<void> hapusBiaya(String id) async {
-    await _biayaBox.delete(id);
+    // TODO: Delete from API or database
+    _biayaList.removeWhere((b) => b.id == id);
   }
 }

@@ -1,32 +1,12 @@
-import 'package:hive_flutter/hive_flutter.dart';
-
-part 'barang.g.dart'; // Untuk Hive code generation
-
-@HiveType(typeId: 1)
-class Barang extends HiveObject {
-  @HiveField(0)
+﻿class Barang {
   final String id;
-  
-  @HiveField(1)
   final String namaBarang;
-  
-  @HiveField(2)
   final String jenis;
-  
-  @HiveField(3)
   final DateTime tanggalMasuk;
-  
-  @HiveField(4)
   final DateTime? expired;
-  
-  @HiveField(5)
-  int stok;
-  
-  @HiveField(6)
+  final int stok;
   final double harga;
-  
-  @HiveField(7)
-  String? fotoUrl; // Tambahkan field foto
+  final String? fotoUrl;
 
   Barang({
     required this.id,
@@ -39,7 +19,6 @@ class Barang extends HiveObject {
     this.fotoUrl,
   });
 
-  // Copy with method
   Barang copyWith({
     String? id,
     String? namaBarang,
@@ -59,6 +38,32 @@ class Barang extends HiveObject {
       stok: stok ?? this.stok,
       harga: harga ?? this.harga,
       fotoUrl: fotoUrl ?? this.fotoUrl,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'namaBarang': namaBarang,
+      'jenis': jenis,
+      'tanggalMasuk': tanggalMasuk.toIso8601String(),
+      'expired': expired?.toIso8601String(),
+      'stok': stok,
+      'harga': harga,
+      'fotoUrl': fotoUrl,
+    };
+  }
+
+  factory Barang.fromJson(Map<String, dynamic> json) {
+    return Barang(
+      id: json['id'],
+      namaBarang: json['namaBarang'],
+      jenis: json['jenis'],
+      tanggalMasuk: DateTime.parse(json['tanggalMasuk']),
+      expired: json['expired'] != null ? DateTime.parse(json['expired']) : null,
+      stok: json['stok'],
+      harga: json['harga'].toDouble(),
+      fotoUrl: json['fotoUrl'],
     );
   }
 }

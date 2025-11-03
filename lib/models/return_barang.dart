@@ -1,28 +1,11 @@
-import 'package:hive/hive.dart';
-part 'return_barang.g.dart';
-
-@HiveType(typeId: 3) // ID unik baru (Barang=0, Pelanggan=1, Biaya=2)
-class ReturnBarang extends HiveObject {
-  @HiveField(0)
+﻿class ReturnBarang {
   final String id;
-
-  @HiveField(1)
-  final String barangId; // ID dari barang yang di-return
-
-  @HiveField(2)
+  final String barangId;
   final String namaBarang;
-
-  @HiveField(3)
   final int jumlah;
-
-  @HiveField(4)
   final String alasan;
-
-  @HiveField(5)
   final DateTime tanggalReturn;
-  
-  @HiveField(6)
-  final String petugas; // Siapa yang mencatat return
+  final String petugas;
 
   ReturnBarang({
     required this.id,
@@ -33,4 +16,28 @@ class ReturnBarang extends HiveObject {
     required this.tanggalReturn,
     required this.petugas,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'barangId': barangId,
+      'namaBarang': namaBarang,
+      'jumlah': jumlah,
+      'alasan': alasan,
+      'tanggalReturn': tanggalReturn.toIso8601String(),
+      'petugas': petugas,
+    };
+  }
+
+  factory ReturnBarang.fromJson(Map<String, dynamic> json) {
+    return ReturnBarang(
+      id: json['id'],
+      barangId: json['barangId'],
+      namaBarang: json['namaBarang'],
+      jumlah: json['jumlah'],
+      alasan: json['alasan'],
+      tanggalReturn: DateTime.parse(json['tanggalReturn']),
+      petugas: json['petugas'],
+    );
+  }
 }

@@ -1,6 +1,5 @@
+﻿import '../models/barang.dart';
 import 'dart:io';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/barang.dart';
 import 'foto_service.dart';
 
 class BarangService {
@@ -9,27 +8,26 @@ class BarangService {
   factory BarangService() => _instance;
   BarangService._internal();
 
-  final Box<Barang> _barangBox = Hive.box<Barang>('barangBox');
+  // TODO: Replace with your database implementation (API, SQLite, etc.)
+  final List<Barang> _barangList = [];
 
   Future<List<Barang>> getBarang() async {
-    if (_barangBox.isEmpty) {
-      await _tambahDataAwal();
-    }
-    return _barangBox.values.toList();
+    // TODO: Fetch from API or database
+    return List.from(_barangList);
   }
 
   Future<void> addBarang(Barang barangBaru) async {
-    await _barangBox.put(barangBaru.id, barangBaru);
+    // TODO: Save to API or database
+    _barangList.add(barangBaru);
   }
 
-  // Method baru untuk menambah barang dengan foto
   Future<void> addBarangWithFoto(Barang barang, File? fotoFile) async {
     try {
       String? fotoUrl;
       if (fotoFile != null) {
         fotoUrl = await _fotoService.uploadFoto(fotoFile, barang.id);
       }
-      
+
       final barangDenganFoto = barang.copyWith(fotoUrl: fotoUrl);
       await addBarang(barangDenganFoto);
     } catch (e) {
@@ -37,94 +35,70 @@ class BarangService {
     }
   }
 
-  // Method untuk update barang dengan foto
   Future<void> updateBarangWithFoto(Barang barang, File? fotoFile) async {
     try {
       String? fotoUrl = barang.fotoUrl;
-      
+
       if (fotoFile != null) {
-        // Hapus foto lama jika ada
         if (fotoUrl != null) {
           await _fotoService.hapusFoto(fotoUrl);
         }
-        // Upload foto baru
         fotoUrl = await _fotoService.uploadFoto(fotoFile, barang.id);
       }
-      
-      final barangDiupdate = barang.copyWith(fotoUrl: fotoUrl);
-      await updateBarang(barangDiupdate);
+
+      final barangBaru = barang.copyWith(fotoUrl: fotoUrl);
+      await updateBarang(barangBaru);
     } catch (e) {
       throw Exception('Gagal update barang dengan foto: $e');
     }
   }
 
-  // Method untuk update barang biasa
   Future<void> updateBarang(Barang barang) async {
-    await _barangBox.put(barang.id, barang);
-  }
-
-  Future<void> deleteBarang(String barangId) async {
-    await _barangBox.delete(barangId);
-  }
-
-  // Method untuk hapus barang dengan foto
-  Future<void> deleteBarangWithFoto(String barangId) async {
-    final barang = _barangBox.get(barangId);
-    if (barang != null && barang.fotoUrl != null) {
-      await _fotoService.hapusFoto(barang.fotoUrl!);
+    // TODO: Update in API or database
+    final index = _barangList.indexWhere((b) => b.id == barang.id);
+    if (index != -1) {
+      _barangList[index] = barang;
     }
-    await deleteBarang(barangId);
   }
 
-  Future<void> updateStokBarang(Barang barang, int tambahanStok) async {
-    barang.stok += tambahanStok;
-    await barang.save();
+  Future<void> hapusBarang(String id) async {
+    // TODO: Delete from API or database
+    _barangList.removeWhere((b) => b.id == id);
   }
 
-  // Method untuk edit produk (nama, jenis, dll)
-  Future<void> editBarang(Barang barangLama, String namaBaru, String jenisBaru, int stokBaru, double hargaBaru) async {
-    final barangDiupdate = barangLama.copyWith(
-      namaBarang: namaBaru,
-      jenis: jenisBaru,
-      stok: stokBaru,
-      harga: hargaBaru,
-    );
-    await updateBarang(barangDiupdate);
+  Future<void> kurangiStok(String idBarang, int jumlah) async {
+    final index = _barangList.indexWhere((b) => b.id == idBarang);
+    if (index != -1) {
+      final barang = _barangList[index];
+      final stokBaru = barang.stok - jumlah;
+      if (stokBaru < 0) {
+        throw Exception('Stok tidak cukup');
+      }
+      _barangList[index] = barang.copyWith(stok: stokBaru);
+    }
   }
 
-  Future<void> _tambahDataAwal() async {
-    final dataAwal = [
-      Barang(
-        id: 'brg-001',
-        namaBarang: 'Kopi Robusta Gayo',
-        jenis: 'Minuman',
-        tanggalMasuk: DateTime.now(),
-        stok: 100,
-        harga: 25000,
-      ),
-      Barang(
-        id: 'brg-002',
-        namaBarang: 'Susu UHT Cokelat',
-        jenis: 'Minuman',
-        tanggalMasuk: DateTime.now(),
-        expired: DateTime.now().add(const Duration(days: 5)), 
-        stok: 50,
-        harga: 7500,
-      ),
-      Barang(
-        id: 'brg-003',
-        namaBarang: 'Roti Tawar',
-        jenis: 'Makanan',
-        tanggalMasuk: DateTime.now(),
-        expired: DateTime.now().subtract(const Duration(days: 2)), 
-        stok: 10,
-        harga: 15000,
-      ),
-    ];
+  Future<Barang?> getBarangById(String id) async {
+    try {
+      return _barangList.firstWhere((b) => b.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
 
-    final Map<String, Barang> dataMap = {
-      for (var barang in dataAwal) barang.id: barang
-    };
-    await _barangBox.putAll(dataMap);
+  // Method untuk update stok barang (untuk restock)
+  Future<void> updateStokBarang(Barang barang, int jumlahTambahan) async {
+    // TODO: Update via API or database
+    final index = _barangList.indexWhere((b) => b.id == barang.id);
+    if (index != -1) {
+      final stokBaru = barang.stok + jumlahTambahan;
+      _barangList[index] = barang.copyWith(stok: stokBaru);
+    }
+  }
+
+  // Method untuk delete barang
+  Future<void> deleteBarang(String id) async {
+    // TODO: Delete via API or database
+    _barangList.removeWhere((b) => b.id == id);
   }
 }
